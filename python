@@ -1,0 +1,178 @@
+import machine
+import network
+import socket
+from machine import Pin, PWM, Timer
+rood = 0
+groen = 0
+blauw = 0
+LDRaan = 0
+LDR = machine.ADC(0)
+tim = Timer(-1)
+ledR = machine.Pin(14,machine.Pin.OUT)
+ledG = machine.Pin(4,machine.Pin.OUT)
+ledB = machine.Pin(5,machine.Pin.OUT)
+sta = network.WLAN(network.STA_IF)
+
+
+def LDRLED(timer):
+  if LDRaan == 1:
+    pwm0 = PWM(Pin(14), freq=500, duty=LDR.read())
+    pwm1 = PWM(Pin(4), freq=500, duty=LDR.read())
+    pwm2 = PWM(Pin(5), freq=500, duty=LDR.read())
+  
+tim.init(period=1000, mode=Timer.PERIODIC, callback=LDRLED)
+
+if not sta.isconnected():
+    print('connecting to network...')
+    sta.active(True)
+    sta.connect("BeagleboneAP","Azerty123")
+    while not sta.isconnected():
+      pass
+print('network config:', sta.ifconfig())
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('',80))
+s.listen(5)
+def web_page():
+
+    html_page = """   
+      <html>   
+      <head>   
+       <meta content="width=device-width, initial-scale=1" name="viewport"></meta>   
+      </head>   
+      <body>   
+        <center><h2>RGB lamp via webserver met LDR</h2></center>   
+        <center>   
+         <form>   
+          <button name="LEDR" type="submit" value="0"> ROOD 0% </button>   
+          <button name="LEDG" type="submit" value="0."> GROEN 0% </button>   
+          <button name="LEDB" type="submit" value="0"> BLAUW 0% </button>      
+         </form>   
+         <form>     
+          <button name="LEDR" type="submit" value="0.25"> ROOD 25% </button> 
+          <button name="LEDG" type="submit" value="0.25"> GROEN 25% </button>  
+          <button name="LEDB" type="submit" value="0.25"> BLAUW 25% </button>   
+         </form>
+         <form>   
+          <button name="LEDR" type="submit" value="0.5"> ROOD 50% </button>   
+          <button name="LEDG" type="submit" value="0.5"> GROEN 50% </button>   
+          <button name="LEDB" type="submit" value="0.5"> BLAUW 50% </button>      
+         </form>   
+         <form>     
+          <button name="LEDR" type="submit" value="0.75"> ROOD 75% </button> 
+          <button name="LEDG" type="submit" value="0.75"> GROEN 75% </button>  
+          <button name="LEDB" type="submit" value="0.75"> BLAUW 75% </button>   
+         </form>
+         <form>   
+          <button name="LEDR" type="submit" value="1"> ROOD 100% </button>   
+          <button name="LEDG" type="submit" value="1"> GROEN 100% </button>   
+          <button name="LEDB" type="submit" value="1"> BLAUW 100% </button>      
+         </form>
+         <p> Wit geregeld door LDR </p>
+         <form>   
+          <button name="LDRAAN" type="submit" value="1"> LDR aan </button>   
+          <button name="LDRUIT" type="submit" value="0"> LDR uit </button>       
+         </form>
+        </center>   
+       </body>   
+      </html>"""  
+    return html_page   
+
+while True:
+    if rood == 0:
+      pwm0 = PWM(Pin(14), freq=500, duty=0)
+    elif rood == 1:
+      pwm0 = PWM(Pin(14), freq=500, duty=256)
+    elif rood == 4:
+      pwm0 = PWM(Pin(14), freq=500, duty=1023)
+    elif rood == 2:
+      pwm0 = PWM(Pin(14), freq=500, duty=511)
+    elif rood == 3:
+      pwm0 = PWM(Pin(14), freq=500, duty=768)
+      
+    if groen == 0:
+      pwm1 = PWM(Pin(4), freq=500, duty=0)
+    elif groen == 1:
+      pwm1 = PWM(Pin(4), freq=500, duty=256)
+    elif groen == 4:
+      pwm1 = PWM(Pin(4), freq=500, duty=1023)
+    elif groen == 2:
+      pwm1 = PWM(Pin(4), freq=500, duty=511)
+    elif groen == 3:
+      pwm1 = PWM(Pin(4), freq=500, duty=768)
+      
+    if blauw == 0:
+      pwm2 = PWM(Pin(5), freq=500, duty=0)
+    elif blauw == 1:
+      pwm2 = PWM(Pin(5), freq=500, duty=256)
+    elif blauw == 4:
+      pwm2 = PWM(Pin(5), freq=500, duty=1023)
+    elif blauw == 2:
+      pwm2 = PWM(Pin(5), freq=500, duty=511)
+    elif blauw == 3:
+      pwm2 = PWM(Pin(5), freq=500, duty=768)
+      
+    conn, addr = s.accept()
+    print("Got connection from %s" % str(addr))
+    
+    request=conn.recv(1024)
+    print("")
+    print("")
+    print("Content %s" % str(request))
+
+    request = str(request)
+    if request.find('/?LEDR=1') == 6:
+      rood = 4
+    elif request.find('/?LEDR=0') == 6:
+      rood = 0
+    elif request.find('/?LEDR=0.25') >= 6:
+      rood = 1
+    elif request.find('/?LEDR=0.5') >= 6:
+      rood = 2
+    elif request.find('/?LEDR=0.75') >= 6:
+      rood = 3
+    response = web_page()
+    
+    request = str(request)
+    if request.find('/?LEDG=1') == 6:
+      groen = 4
+    elif request.find('/?LEDG=0') == 6:
+      groen = 0
+    elif request.find('/?LEDG=0.25') >= 6:
+      groen = 1
+    elif request.find('/?LEDG=0.5') >= 6:
+      groen = 2
+    elif request.find('/?LEDG=0.75') >= 6:
+      groen = 3
+    response = web_page()
+    
+    request = str(request)
+    if request.find('/?LEDB=1') == 6:
+      blauw = 4
+    elif request.find('/?LEDB=0') == 6:
+      blauw = 0
+    elif request.find('/?LEDB=0.25') >= 6:
+      blauw = 1
+    elif request.find('/?LEDB=0.5') >= 6:
+      blauw = 2
+    elif request.find('/?LEDB=0.75') >= 6:
+      blauw = 3
+    response = web_page()
+    
+    request = str(request)
+    if request.find('/?LDRAAN=1') >= 6:
+      LDRaan = 1
+    elif request.find('/?LDRUIT=0') >= 6:
+      LDRaan = 0
+    response = web_page()
+    
+    conn.send('HTTP/1.1 200 OK\n')
+    conn.send('Content-Type: text/html\n')
+    conn.send('Connection: close\n\n')
+    conn.sendall(response)
+    conn.close()
+
+
+
+
+
